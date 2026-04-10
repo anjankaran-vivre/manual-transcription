@@ -4,8 +4,6 @@ import os
 import io
 import requests
 from app.config import settings
-from app.logging.log_streamer import log_streamer
-from app.models.metrics_tracker import metrics_tracker
 from app.services.quality_checker import QualityChecker
 
 
@@ -30,13 +28,9 @@ class GroqService:
 
         try:
             file_size = os.path.getsize(audio_file_path)
-            log_streamer.debug("GroqService", f"Call {call_id}: File size {file_size} bytes")
 
             if file_size < 500:
-                log_streamer.warning("GroqService", f"Call {call_id}: Audio too small (<500 bytes)")
                 return "", "no_speech", "", api_calls
-
-            log_streamer.info("GroqService", f"Call {call_id}: Starting transcription via Groq Whisper")
 
             with open(audio_file_path, "rb") as f:
                 audio_bytes = f.read()
@@ -72,13 +66,10 @@ class GroqService:
 
             if response.status_code != 200:
                 error_text = response.text[:200]
-                log_streamer.error("GroqService", f"Call {call_id}: Whisper API error {response.status_code}: {error_text}")
-                metrics_tracker.record_error()
                 return "", "error", "", api_calls
 
             result = response.json()
             api_calls = 1
-            metrics_tracker.record_api_call(call_type="transcription")
 
             # Extract transcript — handles both formats
             raw_transcript = result.get("text", "").strip()
@@ -90,7 +81,6 @@ class GroqService:
                 )
 
             word_count = len(raw_transcript.split())
-            log_streamer.info("GroqService", f"Call {call_id}: Raw transcript ({word_count} words)")
 
             if not raw_transcript:
                 return "", "no_speech", "", api_calls
@@ -98,18 +88,14 @@ class GroqService:
             # Quality check
             is_clear, reason = QualityChecker.check_audio_quality(raw_transcript, call_id)
             if not is_clear:
-                log_streamer.warning("GroqService", f"Call {call_id}: Unclear audio → {reason}")
                 return "", "unclear_audio", raw_transcript, api_calls
 
             # Clean repetitions
             clean_transcript = QualityChecker.clean_transcript(raw_transcript)
 
-            log_streamer.info("GroqService", f"Call {call_id}: Transcription SUCCESS ({len(clean_transcript.split())} words)")
             return clean_transcript, "success", raw_transcript, api_calls
 
         except Exception as e:
-            log_streamer.error("GroqService", f"Call {call_id}: Transcription failed → {e}")
-            metrics_tracker.record_error()
             return "", "error", "", api_calls
 
     @staticmethod
@@ -118,8 +104,6 @@ class GroqService:
         Generate PURPOSE & OUTCOME using your EXACT original prompt
         """
         try:
-            log_streamer.info("GroqService", f"Call {call_id}: Generating summary")
-
             if len(transcript) > 10000:
                 transcript = transcript[:10000] + "... [truncated]"
 
@@ -160,16 +144,10 @@ Transcript:
             )
 
             if response.status_code != 200:
-                log_streamer.error("GroqService", f"Call {call_id}: Summary API error {response.status_code}")
-                metrics_tracker.record_error()
                 return "PURPOSE: Failed to generate\nOUTCOME: See transcript", False
 
             summary = response.json()["choices"][0]["message"]["content"].strip()
-            metrics_tracker.record_api_call(call_type="summary")
-            log_streamer.info("GroqService", f"Call {call_id}: Summary generated")
             return summary, True
 
         except Exception as e:
-            log_streamer.error("GroqService", f"Call {call_id}: Summary generation failed → {e}")
-            metrics_tracker.record_error()
             return "PURPOSE: Not available\nOUTCOME: See transcript", False

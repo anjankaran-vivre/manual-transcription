@@ -1,6 +1,6 @@
 import re
 from collections import Counter
-from app.logging.log_streamer import log_streamer
+
 
 class QualityChecker:
     @staticmethod
@@ -18,7 +18,6 @@ class QualityChecker:
         
         # Allow very short transcripts
         if total_words < 5:
-            log_streamer.debug("QualityChecker", f"Call {call_id}: Short transcript ({total_words} words)")
             return True, "short_allowed"
         
         # Clean words
@@ -31,9 +30,6 @@ class QualityChecker:
         word_counts = Counter(cleaned_words)
         most_common_word, most_common_count = word_counts.most_common(1)[0]
         frequency_ratio = most_common_count / len(cleaned_words)
-        
-        log_streamer.debug("QualityChecker", 
-            f"Call {call_id}: Most common '{most_common_word}' = {frequency_ratio*100:.1f}%")
         
         # Single word 80%+ of transcript
         if frequency_ratio >= 0.80:

@@ -10,14 +10,16 @@ import os
 import sys
 import tempfile
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 # Add app directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from services.zoho_service import ZohoService
-from services.groq_service import GroqService
-from services.audio_service import AudioService
-from services.quality_checker import QualityChecker
+from app.services.zoho_service import ZohoService
+from app.services.groq_service import GroqService
+from app.services.audio_service import AudioService
+from app.services.quality_checker import QualityChecker
 
 # Streamlit page config
 st.set_page_config(
@@ -104,8 +106,6 @@ with st.sidebar:
     # Help & Documentation
     st.markdown("### 📚 Help & Documentation")
     st.markdown("""
-    - [Setup Guide](SETUP_GUIDE.md)
-    - [Full README](README_STREAMLIT.md)
     - [Groq Docs](https://console.groq.com/docs)
     - [Zoho Help](https://help.zoho.com)
     """)
@@ -117,8 +117,8 @@ def generate_summary(transcription):
             return "No valid transcription to summarize"
         
         with st.spinner("🤖 Generating summary..."):
-            summary = GroqService.generate_summary(transcription)
-            return summary
+            summary, success = GroqService.generate_summary(transcription, "manual")
+            return summary if success else f"Error generating summary: {summary}"
     except Exception as e:
         return f"Error generating summary: {str(e)}"
 
@@ -222,7 +222,7 @@ if st.session_state.current_tab == "upload_transcribe":
                             
                             # Generate summary
                             with st.spinner("🤖 Generating summary..."):
-                                summary = GroqService.generate_summary(transcript)
+                                summary, success = GroqService.generate_summary(transcript, call_id)
                             st.session_state.summary = summary
                             
                             st.success("✅ Transcription complete!")

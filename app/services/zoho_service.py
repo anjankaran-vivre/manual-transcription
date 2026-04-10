@@ -3,9 +3,22 @@ import json
 import time
 import requests
 from app.config import settings
-from app.logging.log_streamer import log_streamer
 
 class ZohoService:
+    @staticmethod
+    def get_authorization_url():
+        """Generate Zoho OAuth authorization URL"""
+        if not settings.ZOHO_CLIENT_ID:
+            return None
+        return (
+            f"https://accounts.zoho.in/oauth/v2/auth?"
+            f"scope=ZohoCRM.modules.ALL,ZohoCRM.settings.ALL&"
+            f"client_id={settings.ZOHO_CLIENT_ID}&"
+            f"response_type=code&"
+            f"redirect_uri={settings.ZOHO_REDIRECT_URI}&"
+            f"access_type=offline"
+        )
+    
     @staticmethod
     def save_tokens(tokens):
         with open(settings.TOKEN_FILE, "w") as f:
@@ -20,21 +33,24 @@ class ZohoService:
     
     @staticmethod
     def generate_access_token(grant_code):
-        url = "https://accounts.zoho.in/oauth/v2/token"
-        params = {
-            "grant_type": "authorization_code",
-            "client_id": settings.ZOHO_CLIENT_ID,
-            "client_secret": settings.ZOHO_CLIENT_SECRET,
-            "redirect_uri": settings.ZOHO_REDIRECT_URI,
-            "code": grant_code
-        }
-        resp = requests.post(url, params=params)
-        resp.raise_for_status()
-        tokens = resp.json()
-        tokens["created_at"] = time.time()
-        ZohoService.save_tokens(tokens)
-        log_streamer.info("ZohoService", "Access token saved")
-        return tokens
+        """Generate access token from authorization code"""
+        try:
+            url = "https://accounts.zoho.in/oauth/v2/token"
+            params = {
+                "grant_type": "authorization_code",
+                "client_id": settings.ZOHO_CLIENT_ID,
+                "client_secret": settings.ZOHO_CLIENT_SECRET,
+                "redirect_uri": settings.ZOHO_REDIRECT_URI,
+                "code": grant_code
+            }
+            resp = requests.post(url, params=params)
+            resp.raise_for_status()
+            tokens = resp.json()
+            tokens["created_at"] = time.time()
+            ZohoService.save_tokens(tokens)
+            return tokens, None
+        except Exception as e:
+            return None, str(e)
     
     @staticmethod
     def refresh_access_token():
@@ -56,7 +72,6 @@ class ZohoService:
         new_tokens["refresh_token"] = refresh_token
         new_tokens["created_at"] = time.time()
         ZohoService.save_tokens(new_tokens)
-        log_streamer.info("ZohoService", "Access token refreshed")
         return new_tokens
     
     @staticmethod
@@ -93,13 +108,10 @@ class ZohoService:
             )
             
             if resp.status_code == 200:
-                log_streamer.info("ZohoService", f"Call {call_id}: Updated Zoho successfully")
                 return True, None
             else:
                 error_msg = f"Status {resp.status_code}: {resp.text}"
-                log_streamer.error("ZohoService", f"Call {call_id}: Zoho update failed - {error_msg}")
                 return False, error_msg
 
         except Exception as e:
-            log_streamer.error("ZohoService", f"Call {call_id}: Zoho error: {e}")
             return False, str(e)
