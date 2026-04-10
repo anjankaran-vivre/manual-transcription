@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pyodbc
+alembic
+groq
+httpx
+httpcore
+requests
+python-dotenv
+psutil
+dnspython
+python-multipart
+python-socketio
+python-engineio
+flask-socketio
+eventlet
