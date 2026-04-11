@@ -88,8 +88,8 @@ class ZohoService:
         return tokens.get("access_token")
     
     @staticmethod
-    def update_call(call_id, transcription, summary):
-        """Update Zoho CRM call record"""
+    def update_call(call_id, transcription="", summary=""):
+        """Update Zoho CRM call record - only update provided fields"""
         try:
             token = ZohoService.get_access_token()
             headers = {
@@ -97,13 +97,20 @@ class ZohoService:
                 "Content-Type": "application/json"
             }
 
-            update_data = {
-                "data": [{
-                    "id": int(call_id),
-                    "Transcription_c": transcription[:2000] if transcription else "No clear speech detected",
-                    "Summary_c": summary
-                }]
-            }
+            # Build update data with only non-empty fields
+            update_record = {"id": int(call_id)}
+            
+            if transcription and transcription.strip():
+                update_record["Transcription_c"] = transcription[:2000]
+            
+            if summary and summary.strip():
+                update_record["Summary_c"] = summary
+            
+            # If both are empty, don't update
+            if len(update_record) == 1:  # Only id
+                return False, "Please provide Transcription or Summary to update"
+            
+            update_data = {"data": [update_record]}
             
             resp = requests.put(
                 "https://www.zohoapis.in/crm/v2/Calls", 

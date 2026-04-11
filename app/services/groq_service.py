@@ -1,5 +1,3 @@
-# app/services/groq_service.py
-
 import os
 import io
 import requests
@@ -8,20 +6,13 @@ from app.services.quality_checker import QualityChecker
 
 
 class GroqService:
-    """
-    Reliable Groq Service using direct OpenAI-compatible HTTP API
-    NO dependency on unstable groq-python SDK features
-    Works 100% with your current GROQ_API_KEY
-    """
-
-    # Official Groq OpenAI-compatible endpoints
     WHISPER_ENDPOINT = "https://api.groq.com/openai/v1/audio/translations"
-    CHAT_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
+    CHAT_ENDPOINT    = "https://api.groq.com/openai/v1/chat/completions"
 
     @staticmethod
     def transcribe_audio(audio_file_path: str, call_id: str):
         """
-        Transcribe audio using Groq Whisper (direct HTTP — never breaks)
+        Transcribe audio using Groq Whisper.
         Returns: (transcript, status, raw_transcript, api_calls)
         """
         api_calls = 0
@@ -35,7 +26,6 @@ class GroqService:
             with open(audio_file_path, "rb") as f:
                 audio_bytes = f.read()
 
-            # Detect file type by magic bytes (exact same logic as your working script)
             if audio_bytes.startswith((b'\xff\xfb', b'\xff\xf3', b'ID3')):
                 file_ext = "mp3"
             elif b'ftyp' in audio_bytes[:20]:
@@ -49,7 +39,7 @@ class GroqService:
                 "file": (f"recording.{file_ext}", io.BytesIO(audio_bytes))
             }
             data = {
-                "model": "whisper-large-v3",
+                "model":           "whisper-large-v3",
                 "response_format": "verbose_json"
             }
             headers = {
@@ -68,10 +58,9 @@ class GroqService:
                 error_text = response.text[:200]
                 return "", "error", "", api_calls
 
-            result = response.json()
+            result    = response.json()
             api_calls = 1
 
-            # Extract transcript — handles both formats
             raw_transcript = result.get("text", "").strip()
             if not raw_transcript and "segments" in result:
                 raw_transcript = " ".join(
@@ -85,12 +74,10 @@ class GroqService:
             if not raw_transcript:
                 return "", "no_speech", "", api_calls
 
-            # Quality check
             is_clear, reason = QualityChecker.check_audio_quality(raw_transcript, call_id)
             if not is_clear:
                 return "", "unclear_audio", raw_transcript, api_calls
 
-            # Clean repetitions
             clean_transcript = QualityChecker.clean_transcript(raw_transcript)
 
             return clean_transcript, "success", raw_transcript, api_calls
@@ -101,7 +88,8 @@ class GroqService:
     @staticmethod
     def generate_summary(transcript: str, call_id: str):
         """
-        Generate PURPOSE & OUTCOME using your EXACT original prompt
+        Generate PURPOSE & OUTCOME summary.
+        Returns: (summary, success)
         """
         try:
             if len(transcript) > 10000:
@@ -126,14 +114,14 @@ Transcript:
 {transcript}"""
 
             payload = {
-                "model": "llama-3.1-8b-instant",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 300,
+                "model":       "llama-3.1-8b-instant",
+                "messages":    [{"role": "user", "content": prompt}],
+                "max_tokens":  300,
                 "temperature": 0.4
             }
             headers = {
                 "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-                "Content-Type": "application/json"
+                "Content-Type":  "application/json"
             }
 
             response = requests.post(

@@ -26,6 +26,9 @@ class Config:
     # Groq API
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     
+    # OpenRouter API (for Gemini)
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+    
     # Download settings
     MAX_DOWNLOAD_RETRIES = int(os.getenv("MAX_DOWNLOAD_RETRIES", "3"))
     RETRY_INTERVAL = int(os.getenv("RETRY_INTERVAL", "5"))

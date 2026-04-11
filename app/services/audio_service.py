@@ -65,7 +65,6 @@ class AudioService:
                 time.sleep(settings.RETRY_INTERVAL)
 
         return None, False, error_msg
-    return None, False, "Max retries exceeded"
     
     @staticmethod
     def cleanup_audio(audio_file):
@@ -73,7 +72,6 @@ class AudioService:
             try:
                 os.remove(audio_file)
                 return True
-            except Exception as e:
-                log_streamer.warning("AudioService", f"Cleanup failed: {e}")
+            except Exception:
                 return False
         return True
