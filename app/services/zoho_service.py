@@ -77,11 +77,15 @@ class ZohoService:
     @staticmethod
     def get_access_token():
         tokens = ZohoService.load_tokens()
-        if not tokens:
-            raise Exception("No tokens found")
-        if time.time() - tokens.get("created_at", 0) > 3500:
+        if not tokens or "access_token" not in tokens:
+            raise Exception("No token. Click 'Generate Token' button in sidebar.")
+        
+        # Auto-refresh if expired (3500 seconds = 58 minutes buffer)
+        created_at = tokens.get("created_at", 0)
+        if time.time() - created_at > 3500:
             tokens = ZohoService.refresh_access_token()
-        return tokens["access_token"]
+        
+        return tokens.get("access_token")
     
     @staticmethod
     def update_call(call_id, transcription, summary):
