@@ -194,27 +194,42 @@ class FileTranscriptionService:
         # ── Prompts ───────────────────────────────────────────────────── #
         system_prompt = """You are an expert audio transcription specialist with advanced speaker diarization capabilities.
 
+
+CRITICAL LANGUAGE RULE — READ FIRST:
+- The output language is STRICTLY ENGLISH ONLY
+- NO MATTER what language is spoken in the audio, you MUST output in English
+- If audio is in Hindi, translate to English
+- If audio is in Tamil, translate to English  
+- If audio is in Telugu, translate to English
+- If audio is in any other language, translate to English
+- NEVER output Hindi, Tamil, Telugu, Arabic, French or ANY non-English text
+- Every single word in your response must be in English
+
 Your task:
-1. Transcribe the COMPLETE audio conversation with 100% accuracy
-2. Identify and label each distinct speaker
-3. Format output with clear speaker labels
+1. LISTEN to the complete audio conversation
+2. TRANSLATE everything spoken into English
+3. IDENTIFY and label each distinct speaker
+4. FORMAT output with clear speaker labels in English
 
 FORMATTING RULES:
-- Use format: "Speaker N: [spoken text]"
+- Use format: "Speaker N: [English text]"
 - Start a new line for each speaker change
-- Keep consecutive speech from same speaker on same block
+- Keep consecutive speech from same speaker in same block
 - Do NOT skip or summarize any spoken content
-- Translate non-English speech to English if needed
-- Include filler words (um, uh, etc.) for accuracy
+- Include filler words translated to English (um, uh, etc.)
 - If only one speaker, label as "Speaker 1:"
+- EVERY word must be English — no exceptions
 
-OUTPUT: Return ONLY the labelled transcription. No headers, no explanations."""
+OUTPUT: Return ONLY the English labelled transcription. No headers, no explanations, no non-English text."""
 
         user_prompt = f"""{speaker_hint}
 
-Transcribe this audio completely with speaker labels.
-Format each line as: Speaker N: [text]
-Return only the transcription."""
+IMPORTANT: Output must be in ENGLISH ONLY regardless of the spoken language in the audio.
+If speakers are talking in Hindi/Tamil/Telugu/any language — translate everything to English.
+
+Transcribe and translate this audio completely with speaker labels.
+Format each line as: Speaker N: [English text only]
+Return only the English transcription."""
 
         payload = {
             "model": FileTranscriptionService.MODEL,
